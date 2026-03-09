@@ -1,7 +1,13 @@
 import { requireSuperadmin } from "@/lib/requireSuperadmin";
 import AdminNavbar from "@/components/AdminNavbar";
+import { redirect } from "next/navigation";
 
-export default async function ImagesPage() {
+export default async function ImagesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ success?: string }>;
+}) {
+  const params = await searchParams;
   const { supabase } = await requireSuperadmin();
 
   const { data: images } = await supabase
@@ -10,25 +16,84 @@ export default async function ImagesPage() {
     .order("created_datetime_utc", { ascending: false })
     .limit(20);
 
+  async function createImage(formData: FormData) {
+    "use server";
+
+    const { supabase } = await requireSuperadmin();
+
+    const url = formData.get("url") as string;
+    const description = formData.get("image_description") as string;
+
+    await supabase.from("images").insert({
+      url,
+      image_description: description,
+      is_public: true,
+    });
+
+    redirect("/admin/images?success=created");
+  }
+
+  async function updateImage(formData: FormData) {
+    "use server";
+
+    const { supabase } = await requireSuperadmin();
+
+    const id = formData.get("id") as string;
+    const description = formData.get("image_description") as string;
+
+    await supabase
+      .from("images")
+      .update({
+        image_description: description,
+      })
+      .eq("id", id);
+
+    redirect("/admin/images?success=updated");
+  }
+
+  async function deleteImage(formData: FormData) {
+    "use server";
+
+    const { supabase } = await requireSuperadmin();
+
+    const id = formData.get("id") as string;
+
+    await supabase
+      .from("images")
+      .delete()
+      .eq("id", id);
+
+    redirect("/admin/images?success=deleted");
+  }
+
   return (
     <main className="min-h-screen bg-pink-50 p-10">
-    <AdminNavbar />
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-pink-600">Images 🖼</h1>
+      <AdminNavbar />
 
-        <a
-          href="/admin"
-          className="bg-white px-5 py-3 rounded-xl shadow hover:shadow-md"
-        >
-          ← Back to Dashboard
-        </a>
-      </div>
+      <h1 className="text-3xl font-bold text-pink-600 mb-6">Images 🖼</h1>
 
-      {/* CREATE IMAGE */}
+      {params?.success === "created" && (
+        <div className="bg-green-100 border border-green-300 text-green-700 p-4 rounded-xl mb-6">
+          ✅ Image created successfully
+        </div>
+      )}
+
+      {params?.success === "updated" && (
+        <div className="bg-green-100 border border-green-300 text-green-700 p-4 rounded-xl mb-6">
+          ✅ Image updated successfully
+        </div>
+      )}
+
+      {params?.success === "deleted" && (
+        <div className="bg-green-100 border border-green-300 text-green-700 p-4 rounded-xl mb-6">
+          ✅ Image deleted successfully
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl shadow p-6 mb-10 max-w-xl">
         <h2 className="text-xl font-semibold mb-4">Add New Image</h2>
 
-        <form action="/api/admin/create-image" method="POST" className="space-y-3">
+        <form action={createImage} className="space-y-3">
           <input
             name="url"
             placeholder="Image URL"
@@ -51,24 +116,14 @@ export default async function ImagesPage() {
         </form>
       </div>
 
-      {/* IMAGE GRID */}
       <div className="grid grid-cols-4 gap-6">
         {images?.map((img) => (
           <div key={img.id} className="bg-white rounded-2xl p-4 shadow">
-            <img
-              src={img.url}
-              className="rounded-lg mb-2"
-              alt="uploaded"
-            />
+            <img src={img.url} className="rounded-lg mb-2" alt="uploaded" />
 
             <p className="text-xs break-all mb-2">{img.url}</p>
 
-            {/* UPDATE DESCRIPTION */}
-            <form
-              action="/api/admin/update-image"
-              method="POST"
-              className="space-y-2"
-            >
+            <form action={updateImage} className="space-y-2">
               <input type="hidden" name="id" value={img.id} />
 
               <textarea
@@ -85,8 +140,7 @@ export default async function ImagesPage() {
               </button>
             </form>
 
-            {/* DELETE */}
-            <form action="/api/admin/delete-image" method="POST">
+            <form action={deleteImage}>
               <input type="hidden" name="id" value={img.id} />
 
               <button
