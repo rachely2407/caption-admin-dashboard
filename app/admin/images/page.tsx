@@ -119,6 +119,7 @@ export default async function ImagesPage({
       <div className="grid grid-cols-4 gap-6">
         {images?.map((img) => (
           <div key={img.id} className="bg-white rounded-2xl p-4 shadow">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={img.url} className="rounded-lg mb-2" alt="uploaded" />
 
             <p className="text-xs break-all mb-2">{img.url}</p>

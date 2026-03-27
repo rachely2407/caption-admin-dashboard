@@ -14,13 +14,17 @@ export async function requireSuperadmin() {
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("is_superadmin")
+    .select("is_superadmin, is_matrix_admin")
     .eq("id", user.id)
     .single();
 
-  if (error || !profile?.is_superadmin) {
+  const isAllowed = Boolean(
+    profile?.is_superadmin || profile?.is_matrix_admin
+  );
+
+  if (error || !isAllowed) {
     await supabase.auth.signOut();
-    redirect("/login?error=not_superadmin");
+    redirect("/login?error=not_admin");
   }
 
   return { supabase, user };
